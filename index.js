@@ -7,6 +7,11 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const ALLOWED_ROLE_ID = process.env.ALLOWED_ROLE_ID || "1517566561270104165";
 
+if (!DISCORD_TOKEN || !CLIENT_ID) {
+    console.error("Missing DISCORD_TOKEN or CLIENT_ID");
+    process.exit(1);
+}
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 let canGenerate = true;
@@ -191,10 +196,7 @@ async function createSingleAccount(batchIndex, totalInBatch) {
         await sleep(1800);
 
         const buttonReady = await waitForSignupButton(page, 25000);
-        if (!buttonReady) {
-            console.log(`${colors.red}[${batchIndex + 1}/${totalInBatch}] Button not enabled -> Skipping${colors.reset}`);
-            return false;
-        }
+        if (!buttonReady) return false;
 
         await page.click('#signup-button');
 
@@ -209,7 +211,6 @@ async function createSingleAccount(batchIndex, totalInBatch) {
                 const userId = await getUserId(username);
                 const cookies = await context.cookies();
                 const robloCookie = cookies.find(c => c.name === '.ROBLOSECURITY');
-                
                 saveAccount(username, password, birthday, robloCookie?.value, userId);
                 return true;
             }
@@ -223,7 +224,7 @@ async function createSingleAccount(batchIndex, totalInBatch) {
 }
 
 async function startGenerator() {
-    console.log(`Generator started | Batch: ${BATCH_SIZE} | Running until stopped`);
+    console.log(`Generator started | Batch: ${BATCH_SIZE}`);
 
     global.stopGenerator = false;
     let totalCreated = 0;
@@ -275,9 +276,7 @@ client.on('interactionCreate', async interaction => {
     const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
 
     if (interaction.commandName === 'stock') {
-        if (!member || !member.roles.cache.has(ALLOWED_ROLE_ID)) {
-            return interaction.reply({ content: 'No permission.', ephemeral: true });
-        }
+        if (!member || !member.roles.cache.has(ALLOWED_ROLE_ID)) return interaction.reply({ content: 'No permission.', ephemeral: true });
 
         await interaction.reply({ content: `Infinite generator started (batches of ${BATCH_SIZE}). Use /stopstocking to stop.`, ephemeral: true });
 
@@ -291,14 +290,12 @@ client.on('interactionCreate', async interaction => {
         await interaction.deferReply({ ephemeral: true });
         const files = fs.readdirSync(folderName).filter(f => f.endsWith('.json'));
         const total = files.length;
-
         const embed = new EmbedBuilder()
             .setColor(0x9B59B6)
             .setTitle('Stock Count')
             .setDescription(`Total Accounts in Stock: ${total}`)
             .setFooter({ text: 'Bleach Hack' })
             .setTimestamp();
-
         await interaction.editReply({ embeds: [embed] });
     }
 
@@ -308,9 +305,7 @@ client.on('interactionCreate', async interaction => {
         if (!member) return interaction.editReply({ content: 'Error fetching member.' });
 
         const cooldownCheck = checkCooldown(interaction.user.id, member);
-        if (cooldownCheck.onCooldown) {
-            return interaction.editReply({ content: `You are on cooldown. Try again in ${cooldownCheck.remainingMinutes} minutes.` });
-        }
+        if (cooldownCheck.onCooldown) return interaction.editReply({ content: `You are on cooldown. Try again in ${cooldownCheck.remainingMinutes} minutes.` });
 
         genCooldowns.set(interaction.user.id, Date.now());
 
@@ -326,11 +321,8 @@ client.on('interactionCreate', async interaction => {
                 const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
                 const created = new Date(data.Created);
                 const ageDays = (now - created) / (1000 * 60 * 60 * 24);
-
                 if (ageDays >= 1) eligible.push({ data, filePath, created });
-            } catch (e) {
-                try { fs.unlinkSync(path.join(folderName, file)); } catch {}
-            }
+            } catch (e) {}
         }
 
         if (eligible.length === 0) return interaction.editReply({ content: 'No accounts older than 1 day available.' });
@@ -339,9 +331,7 @@ client.on('interactionCreate', async interaction => {
         const oldestEntry = eligible[0];
         const data = oldestEntry.data;
 
-        const pfp = data.UserID && data.UserID !== "NOT_CREATED" 
-            ? `https://www.roblox.com/headshot-thumbnail/image?userId=${data.UserID}&width=420&height=420&format=png` 
-            : null;
+        const pfp = data.UserID && data.UserID !== "NOT_CREATED" ? `https://www.roblox.com/headshot-thumbnail/image?userId=${data.UserID}&width=420&height=420&format=png` : null;
 
         const embed = new EmbedBuilder()
             .setColor(0x9B59B6)
@@ -380,9 +370,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'settings') {
-        if (!member || !member.roles.cache.has(ALLOWED_ROLE_ID)) {
-            return interaction.reply({ content: 'No permission.', ephemeral: true });
-        }
+        if (!member || !member.roles.cache.has(ALLOWED_ROLE_ID)) return interaction.reply({ content: 'No permission.', ephemeral: true });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('enable_gen').setLabel('Enable Generate').setStyle(ButtonStyle.Success),
@@ -393,9 +381,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'stopstocking') {
-        if (!member || !member.roles.cache.has(ALLOWED_ROLE_ID)) {
-            return interaction.reply({ content: 'No permission.', ephemeral: true });
-        }
+        if (!member || !member.roles.cache.has(ALLOWED_ROLE_ID)) return interaction.reply({ content: 'No permission.', ephemeral: true });
         if (!global.generatorRunning) return interaction.reply({ content: 'No generator running.', ephemeral: true });
 
         global.stopGenerator = true;
