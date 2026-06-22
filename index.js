@@ -3,6 +3,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
+const DISCORD_TOKEN = "MTUxNzU2NDY5MjY2NTczMzQ1Mw.GTEShx.K42g23bFbEjLz8OBDQfu4YviSo6jmdHQowZgd8";
 const CLIENT_ID = "1517564692665733453";
 const ALLOWED_ROLE_ID = "1517566561270104165";
 
